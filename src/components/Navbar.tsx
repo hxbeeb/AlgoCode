@@ -22,7 +22,7 @@ export default function Navbar({
           width={50}
           height={50}
         />
-        <h1 className="text-2xl font-bold">LeetCode</h1>
+        <h1 className="text-2xl font-bold">AlgoCode</h1>
 
         {user ? (
           <div className="flex gap-4 items-center">

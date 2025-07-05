@@ -1,4 +1,5 @@
 import { Problem } from "../problems/problems";
+import axios from "axios";
 
 class ListNode {
 	val: number;
@@ -87,6 +88,68 @@ function getOrderedArgsFromFunction(fn: Function, inputObj: Record<string, any>)
 	});
 }
 
+// Judge0 API integration via RapidAPI
+const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
+const RAPIDAPI_HOST = process.env.RAPIDAPI_HOST || "judge0-ce.p.rapidapi.com";
+const JUDGE0_BASE_URL = `https://${RAPIDAPI_HOST}`;
+
+export async function runCodeWithJudge0({
+	source_code,
+	language_id,
+	stdin = "",
+}: {
+	source_code: string;
+	language_id: number;
+	stdin?: string;
+}): Promise<{
+	stdout: string | null;
+	stderr: string | null;
+	compile_output: string | null;
+	status: { id: number; description: string };
+	time: string | null;
+	memory: number | null;
+	token: string;
+}> {
+	if (!RAPIDAPI_KEY) throw new Error("RAPIDAPI_KEY is not set in environment");
+
+	// 1. Submit code to Judge0
+	const submissionRes = await axios.post(
+		`${JUDGE0_BASE_URL}/submissions?base64_encoded=false&wait=false`,
+		{
+			source_code,
+			language_id,
+			stdin,
+		},
+		{
+			headers: {
+				"content-type": "application/json",
+				"X-RapidAPI-Key": RAPIDAPI_KEY,
+				"X-RapidAPI-Host": RAPIDAPI_HOST,
+			},
+		}
+	);
+
+	const { token } = submissionRes.data;
+
+	// 2. Poll for result
+	let result;
+	for (let i = 0; i < 10; i++) {
+		const res = await axios.get(
+			`${JUDGE0_BASE_URL}/submissions/${token}?base64_encoded=false`,
+			{
+				headers: {
+					"X-RapidAPI-Key": RAPIDAPI_KEY,
+					"X-RapidAPI-Host": RAPIDAPI_HOST,
+				},
+			}
+		);
+		result = res.data;
+		// Status: 1 = In Queue, 2 = Processing, 3 = Accepted, >3 = Error
+		if (result.status && result.status.id >= 3) break;
+		await new Promise((r) => setTimeout(r, 1000)); // wait 1s
+	}
+	return { ...result, token };
+}
 
 export function evaluateUserCode(userCode: string, problem: Problem): boolean {
 	try {

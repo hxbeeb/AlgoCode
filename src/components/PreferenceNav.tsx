@@ -3,7 +3,16 @@ import { AiOutlineSetting } from "react-icons/ai";
 import { BiExitFullscreen, BiFullscreen } from "react-icons/bi";
 import { useState } from "react";
 
-export default function PreferenceNav() {
+export type Language = {
+  name: string;
+  id: number;
+};
+
+export default function PreferenceNav({ language, setLanguage, languages }: {
+  language: Language;
+  setLanguage: (lang: Language) => void;
+  languages: Language[];
+}) {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const toggleFullscreen = () => {
@@ -20,13 +29,18 @@ export default function PreferenceNav() {
     <div className="flex items-center justify-between bg-dark-layer-2 h-11 w-full px-4">
       {/* LEFT SIDE */}
       <div className="flex items-center text-white">
-        <button
-          className="flex items-center cursor-pointer rounded text-left focus:outline-none 
-          bg-dark-label-2 hover:bg-dark-fill-2 px-3 py-1.5 font-medium
-          bg-[#2C2C2E]  border border-gray-700"
+        <select
+          className="flex items-center cursor-pointer rounded text-left focus:outline-none bg-dark-label-2 hover:bg-dark-fill-2 px-3 py-1.5 font-medium bg-[#2C2C2E] border border-gray-700 text-xs text-dark-label-2"
+          value={language.id}
+          onChange={e => {
+            const selected = languages.find(l => l.id === Number(e.target.value));
+            if (selected) setLanguage(selected);
+          }}
         >
-          <span className="text-xs text-dark-label-2">JavaScript</span>
-        </button>
+          {languages.map(lang => (
+            <option key={lang.id} value={lang.id}>{lang.name}</option>
+          ))}
+        </select>
       </div>
 
       {/* RIGHT SIDE */}
@@ -36,8 +50,7 @@ export default function PreferenceNav() {
           <button onClick={toggleFullscreen} className="p-2">
             {isFullscreen?<BiExitFullscreen className="text-xl text-dark-label-2 hover:text-white transition"/>:<BiFullscreen className="text-xl text-dark-label-2 hover:text-white transition" />}
           </button>
-          <div className="absolute top-full right-0 mt-1 scale-0 group-hover:scale-100 transition-all 
-            duration-200 bg-dark-layer-1 text-white text-xs px-2 py-1 rounded shadow-lg z-20 whitespace-nowrap">
+          <div className="absolute top-full right-0 mt-1 scale-0 group-hover:scale-100 transition-all duration-200 bg-dark-layer-1 text-white text-xs px-2 py-1 rounded shadow-lg z-20 whitespace-nowrap">
             {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
           </div>
         </div>

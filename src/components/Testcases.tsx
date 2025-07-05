@@ -9,7 +9,8 @@ import { doc, updateDoc, arrayUnion, getDoc } from "firebase/firestore";
 import EditorFooter from "./EditorFooter";
 import { evaluateUserCode } from "@/app/ProblemHandler/handler"; // common evaluator
 
-export default function Testcases({ pid, userCode, setUserCode,setSuccess }: { pid: string, userCode: string, setUserCode: any,setSuccess:any }) {
+// Props: pid, userCode, setUserCode, setSuccess, languageId
+export default function Testcases({ pid, userCode, setUserCode, setSuccess, languageId }: { pid: string, userCode: string, setUserCode: any, setSuccess: any, languageId: number }) {
 	const [activeTestCaseId, setActiveTestCaseId] = useState(0);
 	const [problem, setProblem] = useState<Problem | null>(null);
 	const [user] = useAuthState(auth);
@@ -31,36 +32,166 @@ export default function Testcases({ pid, userCode, setUserCode,setSuccess }: { p
 		};
 		fetchProblem();
 	}, [pid, router, setUserCode]);
-	const handleRun=async()=>{
-		try {
-			if (!problem) return;
-			const success = evaluateUserCode(userCode, problem);
-			if (success) {
-				toast.success("Congrats! All tests passed! \nSubmit your code.", {
-					position: "top-center",
-					autoClose: 3000,
-					theme: "dark",
-				});
-			
 
-
-}else{		
-				
-				toast.error("Oops! One or more test cases failed", {
-					position: "top-center",
-					autoClose: 3000,
-					theme: "dark",
-				});
+	// Helper: Generate JS wrapper for any input signature
+	function generateJSWrapper(functionName: string, inputObj: Record<string, any>) {
+		const keys = Object.keys(inputObj);
+		let wrapper = `const fs = require('fs');\nconst input = fs.readFileSync(0, 'utf-8').trim().split('\\n');\n`;
+		keys.forEach((key, i) => {
+			const val = inputObj[key];
+			if (typeof val === 'number') {
+				wrapper += `const ${key} = Number(input[${i}]);\n`;
+			} else if (typeof val === 'string') {
+				wrapper += `const ${key} = input[${i}];\n`;
+			} else {
+				wrapper += `const ${key} = JSON.parse(input[${i}]);\n`;
 			}
-		} catch (error: any) {
-			toast.error(error.message || "Something went wrong", {
+		});
+		return wrapper + `\n// ---USER CODE BELOW---\n`;
+	}
+
+	// Helper: Generate Python wrapper for any input signature
+	function generatePythonWrapper(functionName: string, inputObj: Record<string, any>) {
+		const keys = Object.keys(inputObj);
+		let wrapper = `import sys\ninput_lines = sys.stdin.read().splitlines()\n`;
+		keys.forEach((key, i) => {
+			const val = inputObj[key];
+			if (typeof val === 'number') {
+				wrapper += `${key} = int(input_lines[${i}])\n`;
+			} else if (typeof val === 'string') {
+				wrapper += `${key} = input_lines[${i}]\n`;
+			} else {
+				wrapper += `${key} = eval(input_lines[${i}])\n`;
+			}
+		});
+		return wrapper + `\n# ---USER CODE BELOW---\n`;
+	}
+
+	// Helper: Generate Java wrapper for any input signature
+	function generateJavaWrapper(functionName: string, inputObj: Record<string, any>) {
+		const keys = Object.keys(inputObj);
+		let wrapper = `import java.util.*;\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n`;
+		keys.forEach((key, i) => {
+			const val = inputObj[key];
+			if (typeof val === 'number') {
+				wrapper += `        int ${key} = Integer.parseInt(sc.nextLine());\n`;
+			} else if (typeof val === 'string') {
+				wrapper += `        String ${key} = sc.nextLine();\n`;
+			} else {
+				wrapper += `        String ${key}Str = sc.nextLine();\n        int[] ${key} = Arrays.stream(${key}Str.replaceAll("[\\[\\] ]", "").split(",")).filter(s -> !s.isEmpty()).mapToInt(Integer::parseInt).toArray();\n`;
+			}
+		});
+		wrapper += `        // ---USER CODE BELOW---\n`;
+		return wrapper;
+	}
+
+	// Helper: Generate C++ wrapper for any input signature
+	function generateCppWrapper(functionName: string, inputObj: Record<string, any>) {
+		const keys = Object.keys(inputObj);
+		let wrapper = `#include <iostream>\n#include <vector>\n#include <sstream>\nusing namespace std;\nint main() {\n`;
+		keys.forEach((key, i) => {
+			const val = inputObj[key];
+			if (typeof val === 'number') {
+				wrapper += `    int ${key}; cin >> ${key}; cin.ignore();\n`;
+			} else if (typeof val === 'string') {
+				wrapper += `    string ${key}; getline(cin, ${key});\n`;
+			} else {
+				wrapper += `    string ${key}Str; getline(cin, ${key}Str);\n    vector<int> ${key};\n    stringstream ss${i}(${key}Str.substr(1, ${key}Str.size()-2));\n    string temp;\n    while(getline(ss${i}, temp, ',')) {\n        if(!temp.empty()) ${key}.push_back(stoi(temp));\n    }\n`;
+			}
+		});
+		wrapper += `    // ---USER CODE BELOW---\n`;
+		return wrapper;
+	}
+
+	function tryParseJSON(str: string) {
+		try {
+			return JSON.parse(str.trim());
+		} catch {
+			return null;
+		}
+	}
+
+	function outputsEqual(expected: string, actual: string) {
+		const expectedParsed = tryParseJSON(expected);
+		const actualParsed = tryParseJSON(actual);
+		if (expectedParsed !== null && actualParsed !== null) {
+			return JSON.stringify(expectedParsed) === JSON.stringify(actualParsed);
+		}
+		// fallback: compare trimmed, whitespace-insensitive
+		return expected.trim().replace(/\s+/g, '') === actual.trim().replace(/\s+/g, '');
+	}
+
+	const handleRun = async () => {
+		if (!problem) return;
+		let allPassed = true;
+		for (let i = 0; i < problem.examples.length; i++) {
+			const example = problem.examples[i];
+			let stdin = "";
+			let inputObj = {};
+			if (example?.input) {
+				inputObj = example.input[0] || {};
+				stdin = Object.values(inputObj)
+					.map((v) => (Array.isArray(v) || typeof v === "object" ? JSON.stringify(v) : v))
+					.join("\n");
+			}
+			let codeToSend = userCode;
+			if (languageId === 63) {
+				const match = userCode.match(/function\s+([a-zA-Z0-9_]+)/);
+				const functionName = match ? match[1] : "solution";
+				const wrapper = generateJSWrapper(functionName, inputObj);
+				codeToSend = `${wrapper}${userCode}\n// ---USER CODE ABOVE---\nconsole.log(${functionName}(${Object.keys(inputObj).join(", ")}));`;
+			} else if (languageId === 71) {
+				const match = userCode.match(/def\s+([a-zA-Z0-9_]+)/);
+				const functionName = match ? match[1] : "solution";
+				const wrapper = generatePythonWrapper(functionName, inputObj);
+				codeToSend = `${wrapper}${userCode}\n# ---USER CODE ABOVE---\nprint(${functionName}(${Object.keys(inputObj).join(", ")}))`;
+			} else if (languageId === 62) {
+				const match = userCode.match(/([a-zA-Z0-9_]+)\s*\(/);
+				const functionName = match ? match[1] : "solution";
+				const wrapper = generateJavaWrapper(functionName, inputObj);
+				codeToSend = `${wrapper}${userCode}\n        // ---USER CODE ABOVE---\n        System.out.println(${functionName}(${Object.keys(inputObj).join(", ")}));\n    }\n}`;
+			} else if (languageId === 54) {
+				const match = userCode.match(/([a-zA-Z0-9_]+)\s*\(/);
+				const functionName = match ? match[1] : "solution";
+				const wrapper = generateCppWrapper(functionName, inputObj);
+				codeToSend = `${wrapper}${userCode}\n    // ---USER CODE ABOVE---\n    cout << ${functionName}(${Object.keys(inputObj).join(", ")}) << endl;\n    return 0;\n}`;
+			}
+			try {
+				const res = await fetch("/api/judge0", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						source_code: codeToSend,
+						language_id: languageId,
+						stdin,
+					}),
+				});
+				const data = await res.json();
+				const expected = example.output;
+				const actual = data.stdout || '';
+				if (!data.stdout || (example.output && !outputsEqual(expected, actual))) {
+					allPassed = false;
+					break;
+				}
+			} catch (error: any) {
+				allPassed = false;
+				break;
+			}
+		}
+		if (allPassed) {
+			toast.success("All test cases passed!", {
+				position: "top-center",
+				autoClose: 3000,
+				theme: "dark",
+			});
+		} else {
+			toast.error("One or more test cases failed.", {
 				position: "top-center",
 				autoClose: 3000,
 				theme: "dark",
 			});
 		}
-
-	}
+	};
 
 	const handleSubmit = async () => {
 		if (!user) {
@@ -71,52 +202,92 @@ export default function Testcases({ pid, userCode, setUserCode,setSuccess }: { p
 			});
 			return;
 		}
-		try {
-			if (!problem) return;
-			const success = evaluateUserCode(userCode, problem);
-			if (success) {
-				setSuccess(true);
-				toast.success("Congrats! code Submitted!", {
-					position: "top-center",
-					autoClose: 3000,
-					theme: "dark",
-				});
-				setTimeout(()=>{
-					setSuccess(false)
-				},4000)
-				const userRef = doc(firestore, "users", user.uid);
-const userSnap = await getDoc(userRef);
-
-if (userSnap.exists()) {
-  const userData = userSnap.data();
-  const solvedProblems = userData.solved || [];
-  // Check if pid is already solved
-  if (!solvedProblems.includes(pid)) {
-    let a = 1;
-    if (problem.difficulty === "Medium") a = 2;
-    else if (problem.difficulty === "Hard") a = 3;
-
-    await updateDoc(userRef, {
-      solved: arrayUnion(pid),
-      points: userData.points?userData.points+a:a, // Consider using increment if you're accumulating points
-    });
-
-	if (typeof window !== "undefined") {
-		window.dispatchEvent(new CustomEvent("solved-problem", { detail: pid }));
-	}
-
-  }
-}
-}else{		
-				
-				toast.error("Oops! One or more test cases failed", {
-					position: "top-center",
-					autoClose: 3000,
-					theme: "dark",
-				});
+		if (!problem) return;
+		let allPassed = true;
+		for (let i = 0; i < problem.examples.length; i++) {
+			const example = problem.examples[i];
+			let stdin = "";
+			let inputObj = {};
+			if (example?.input) {
+				inputObj = example.input[0] || {};
+				stdin = Object.values(inputObj)
+					.map((v) => (Array.isArray(v) || typeof v === "object" ? JSON.stringify(v) : v))
+					.join("\n");
 			}
-		} catch (error: any) {
-			toast.error(error.message || "Something went wrong", {
+			let codeToSend = userCode;
+			if (languageId === 63) {
+				const match = userCode.match(/function\s+([a-zA-Z0-9_]+)/);
+				const functionName = match ? match[1] : "solution";
+				const wrapper = generateJSWrapper(functionName, inputObj);
+				codeToSend = `${wrapper}${userCode}\n// ---USER CODE ABOVE---\nconsole.log(${functionName}(${Object.keys(inputObj).join(", ")}));`;
+			} else if (languageId === 71) {
+				const match = userCode.match(/def\s+([a-zA-Z0-9_]+)/);
+				const functionName = match ? match[1] : "solution";
+				const wrapper = generatePythonWrapper(functionName, inputObj);
+				codeToSend = `${wrapper}${userCode}\n# ---USER CODE ABOVE---\nprint(${functionName}(${Object.keys(inputObj).join(", ")}))`;
+			} else if (languageId === 62) {
+				const match = userCode.match(/([a-zA-Z0-9_]+)\s*\(/);
+				const functionName = match ? match[1] : "solution";
+				const wrapper = generateJavaWrapper(functionName, inputObj);
+				codeToSend = `${wrapper}${userCode}\n        // ---USER CODE ABOVE---\n        System.out.println(${functionName}(${Object.keys(inputObj).join(", ")}));\n    }\n}`;
+			} else if (languageId === 54) {
+				const match = userCode.match(/([a-zA-Z0-9_]+)\s*\(/);
+				const functionName = match ? match[1] : "solution";
+				const wrapper = generateCppWrapper(functionName, inputObj);
+				codeToSend = `${wrapper}${userCode}\n    // ---USER CODE ABOVE---\n    cout << ${functionName}(${Object.keys(inputObj).join(", ")}) << endl;\n    return 0;\n}`;
+			}
+			try {
+				const res = await fetch("/api/judge0", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						source_code: codeToSend,
+						language_id: languageId,
+						stdin,
+					}),
+				});
+				const data = await res.json();
+				const expected = example.output;
+				const actual = data.stdout || '';
+				if (!data.stdout || (example.output && !outputsEqual(expected, actual))) {
+					allPassed = false;
+					break;
+				}
+			} catch (error: any) {
+				allPassed = false;
+				break;
+			}
+		}
+		if (allPassed) {
+			setSuccess(true);
+			toast.success("Code submitted!", {
+				position: "top-center",
+				autoClose: 3000,
+				theme: "dark",
+			});
+			setTimeout(() => {
+				setSuccess(false);
+			}, 4000);
+			const userRef = doc(firestore, "users", user.uid);
+			const userSnap = await getDoc(userRef);
+			if (userSnap.exists()) {
+				const userData = userSnap.data();
+				const solvedProblems = userData.solved || [];
+				if (!solvedProblems.includes(pid)) {
+					let a = 1;
+					if (problem.difficulty === "Medium") a = 2;
+					else if (problem.difficulty === "Hard") a = 3;
+					await updateDoc(userRef, {
+						solved: arrayUnion(pid),
+						points: userData.points ? userData.points + a : a,
+					});
+					if (typeof window !== "undefined") {
+						window.dispatchEvent(new CustomEvent("solved-problem", { detail: pid }));
+					}
+				}
+			}
+		} else {
+			toast.error("One or more test cases failed.", {
 				position: "top-center",
 				autoClose: 3000,
 				theme: "dark",
@@ -164,14 +335,12 @@ if (userSnap.exists()) {
 	}
 	
 	const inputObj = problem.examples[activeTestCaseId]?.input?.[0] || {};
-const metaObj = problem.examples[activeTestCaseId]?.output || "";
-const explanation = problem.examples[activeTestCaseId]?.explanation || "";
+	const metaObj = problem.examples[activeTestCaseId]?.output || "";
+	const explanation = problem.examples[activeTestCaseId]?.explanation || "";
 
-const formattedInput = Object.entries(inputObj)
-	.map(([k, v]) => `${k} = ${formatValue(v)}`)
-	.join('\n');
-
-
+	const formattedInput = Object.entries(inputObj)
+		.map(([k, v]) => `${k} = ${formatValue(v)}`)
+		.join('\n');
 
 	return (
 		<div className='w-full px-6 pb-24 overflow-auto'>
