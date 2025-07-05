@@ -90,7 +90,7 @@ function getOrderedArgsFromFunction(fn: Function, inputObj: Record<string, any>)
 
 export function evaluateUserCode(userCode: string, problem: Problem): boolean {
 	try {
-		console.log(userCode);
+		// console.log(userCode);
 		const userFunction = new Function(`return ${userCode}`)();
 
 		for (const [index, example] of problem.examples.entries()) {
@@ -123,8 +123,8 @@ export function evaluateUserCode(userCode: string, problem: Problem): boolean {
 				);
 			}
 
-			console.log(inputs);
-			console.log(userFunction);
+			// console.log(inputs);
+			// console.log(userFunction);
 
 			let result = userFunction(...inputs);
 
@@ -142,11 +142,11 @@ export function evaluateUserCode(userCode: string, problem: Problem): boolean {
 			}
 
 			// --- 🔍 Detailed Debug Output ---
-			console.log(`\n🧪 Test Case ${index + 1}`);
-			console.log(`Input:\n${JSON.stringify(input, null, 2)}`);
-			console.log(`Expected Output:\n${JSON.stringify(expected)}`);
-			console.log(`Your Output:\n${JSON.stringify(result)}`);
-			console.log(`Result: ${isCorrect ? "✅ Passed" : "❌ Failed"}`);
+			// console.log(`\n🧪 Test Case ${index + 1}`);
+			// console.log(`Input:\n${JSON.stringify(input, null, 2)}`);
+			// console.log(`Expected Output:\n${JSON.stringify(expected)}`);
+			// console.log(`Your Output:\n${JSON.stringify(result)}`);
+			// console.log(`Result: ${isCorrect ? "✅ Passed" : "❌ Failed"}`);
 
 			if (!isCorrect) return false;
 		}

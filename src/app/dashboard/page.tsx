@@ -52,7 +52,8 @@ export default function Dashboard() {
 	if (!user) return null;
 
 	return (
-		<div className="min-h-screen bg-black text-white">
+		<div className="min-h-screen bg-black text-white bg-cover bg-center bg-no-repeat"
+		style={{ backgroundImage: 'url("/hero.png")' }} >
 			<Topbar user={user} />
 
 			<h1 className="text-2xl text-center text-gray-200 font-semibold uppercase mt-10 mb-6">
@@ -61,6 +62,38 @@ export default function Dashboard() {
 
 			{loadingProblems ? (
 				<div className="overflow-x-auto px-4 pb-10 animate-pulse">
+					 <table className="w-full max-w-6xl mx-auto text-sm text-left text-gray-300 border border-gray-700 animate-pulse">
+      <thead className="text-xs uppercase bg-gray-800 text-gray-300">
+        <tr>
+          <th className="px-3 py-3">Status</th>
+          <th className="px-6 py-3">Title</th>
+          <th className="px-6 py-3">Difficulty</th>
+          <th className="px-6 py-3">Category</th>
+          <th className="px-6 py-3">Solution</th>
+        </tr>
+      </thead>
+      <tbody>
+        {[...Array(6)].map((_, i) => (
+          <tr key={i} className="border-t border-gray-700 bg-black">
+            <td className="px-3 py-3 text-center">
+              <div className="h-4 w-4 bg-gray-600 rounded-full mx-auto" />
+            </td>
+            <td className="px-6 py-3">
+              <div className="h-4 bg-gray-700 rounded w-48"></div>
+            </td>
+            <td className="px-6 py-3">
+              <div className="h-4 bg-gray-700 rounded w-20"></div>
+            </td>
+            <td className="px-6 py-3">
+              <div className="h-4 bg-gray-700 rounded w-24"></div>
+            </td>
+            <td className="px-6 py-3">
+              <div className="h-5 w-5 bg-gray-600 rounded-full" />
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
 					{/* Skeleton table */}
 					{/* ...same as before */}
 				</div>

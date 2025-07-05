@@ -48,7 +48,7 @@ export default function Home() {
     <div className="relative min-h-screen bg-gray-900 text-white">
       {/* Hero Background Image */}
       <Image
-        src="/hero-bg.jpg"
+        src="/hero.png"
         alt="Hero Background"
         layout="fill"
         objectFit="cover"

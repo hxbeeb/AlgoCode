@@ -363,7 +363,7 @@ function userProblem(problemId:string){
 			window.removeEventListener("solved-problem", listener);
 
 	}},[problemId,user])
-	console.log(data);
+	// console.log(data);
 
 	return {...data,setData};
 

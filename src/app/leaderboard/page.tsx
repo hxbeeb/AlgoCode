@@ -26,6 +26,7 @@ interface LeaderboardEntry {
 
 export default function Leaderboard() {
   const [data, setData] = useState<LeaderboardEntry[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -66,13 +67,14 @@ export default function Leaderboard() {
 
       leaderboard.sort((a, b) => b.points - a.points);
       setData(leaderboard);
+      setLoading(false);
     };
 
     fetchData();
   }, []);
 
   return (
-    <div className="min-h-screen bg-black text-white p-6">
+    <div className="min-h-screen bg-black text-white p-6 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: 'url("/hero.png")' }}>
       <h1 className="text-3xl font-bold mb-6">🏆 Leaderboard</h1>
       <div className="overflow-x-auto">
         <table className="w-full border border-gray-700">
@@ -88,17 +90,43 @@ export default function Leaderboard() {
             </tr>
           </thead>
           <tbody>
-            {data.map((entry, idx) => (
-              <tr key={idx} className="text-center border-t border-gray-800">
-                <td className="p-2">{idx + 1}</td>
-                <td className="p-2">{entry.name}</td>
-                <td className="p-2">{entry.easy}</td>
-                <td className="p-2">{entry.medium}</td>
-                <td className="p-2">{entry.hard}</td>
-                <td className="p-2">{entry.total}</td>
-                <td className="p-2">{entry.points}</td>
-              </tr>
-            ))}
+            {loading
+              ? [...Array(6)].map((_, i) => (
+                  <tr key={i} className="animate-pulse border-t border-gray-800 bg-black">
+                    <td className="p-2">
+                      <div className="h-4 bg-gray-700 rounded w-8 mx-auto" />
+                    </td>
+                    <td className="p-2">
+                      <div className="h-4 bg-gray-700 rounded w-24 mx-auto" />
+                    </td>
+                    <td className="p-2">
+                      <div className="h-4 bg-gray-700 rounded w-10 mx-auto" />
+                    </td>
+                    <td className="p-2">
+                      <div className="h-4 bg-gray-700 rounded w-10 mx-auto" />
+                    </td>
+                    <td className="p-2">
+                      <div className="h-4 bg-gray-700 rounded w-10 mx-auto" />
+                    </td>
+                    <td className="p-2">
+                      <div className="h-4 bg-gray-700 rounded w-10 mx-auto" />
+                    </td>
+                    <td className="p-2">
+                      <div className="h-4 bg-gray-700 rounded w-12 mx-auto" />
+                    </td>
+                  </tr>
+                ))
+              : data.map((entry, idx) => (
+                  <tr key={idx} className="text-center border-t border-gray-800 bg-black">
+                    <td className="p-2">{idx + 1}</td>
+                    <td className="p-2">{entry.name}</td>
+                    <td className="p-2">{entry.easy}</td>
+                    <td className="p-2">{entry.medium}</td>
+                    <td className="p-2">{entry.hard}</td>
+                    <td className="p-2">{entry.total}</td>
+                    <td className="p-2">{entry.points}</td>
+                  </tr>
+                ))}
           </tbody>
         </table>
       </div>
