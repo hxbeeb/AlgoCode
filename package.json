@@ -2,6 +2,11 @@
   "name": "leetcode",
   "version": "0.1.0",
   "private": true,
+  "description": "This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).",
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "index.js",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
@@ -9,16 +14,28 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@codemirror/lang-cpp": "^6.0.3",
+    "@codemirror/lang-javascript": "^6.2.4",
+    "@uiw/codemirror-theme-vscode": "^4.23.14",
+    "@uiw/react-codemirror": "^4.23.14",
+    "firebase": "^11.10.0",
+    "next": "15.3.4",
     "react": "^19.0.0",
+    "react-confetti": "^6.4.0",
     "react-dom": "^19.0.0",
-    "next": "15.3.4"
+    "react-firebase-hooks": "^5.1.1",
+    "react-icons": "^5.5.0",
+    "react-split": "^2.0.14",
+    "react-toastify": "^11.0.5",
+    "react-youtube": "^10.1.0",
+    "recoil": "^0.7.7"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4"
+    "tailwindcss": "^4",
+    "typescript": "^5"
   }
 }
