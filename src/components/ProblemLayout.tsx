@@ -112,6 +112,7 @@ export default function ProblemLayout({ problem }: { problem: Problem }) {
 				{showTestCases && (
 					<div className="p-3 bg-[#111] border-t border-gray-700 overflow-auto max-h-[35%]">
 						<Testcases
+						setSuccess={setSuccess}
 							// problem={problem}
 							pid={problem.id}
 							userCode={userCode}
