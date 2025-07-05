@@ -13,25 +13,42 @@ export default function Home() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [login, setLogin] = useState(false);
-  const[data,setData]=useState<any>();
+  const [data, setData] = useState<any>();
+  const [loading, setLoading] = useState(true); // ✅ loading state
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
-      const dbRef=doc(firestore,"users",currentUser!.uid);
-      const snap=await getDoc(dbRef);
-      const data=snap.data();
-     
-      setData(data);
+
+      if (currentUser) {
+        const dbRef = doc(firestore, "users", currentUser.uid);
+        const snap = await getDoc(dbRef);
+        const userData = snap.data();
+        setData(userData);
+      } else {
+        setData(null);
+      }
+
+      setLoading(false); // ✅ done loading
     });
+
     return () => unsubscribe();
   }, []);
+
+  // ✅ Show loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-900 text-white text-xl font-semibold">
+        Loading...
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen bg-gray-900 text-white">
       {/* Hero Background Image */}
       <Image
-        src="/hero-bg.jpg" // Make sure to add this image to your public folder
+        src="/hero-bg.jpg"
         alt="Hero Background"
         layout="fill"
         objectFit="cover"
@@ -40,7 +57,7 @@ export default function Home() {
 
       {/* Overlay Content */}
       <div className="relative z-10">
-      <Navbar login={login} setLogin={setLogin} user={user} data={user ? data : null} />
+        <Navbar login={login} setLogin={setLogin} user={user} data={data} />
 
         <div className="flex flex-col items-center justify-center h-[calc(100vh-4rem)] gap-6 px-4 text-center">
           <h1 className="text-4xl md:text-6xl font-extrabold text-blue-300 drop-shadow-lg">
@@ -53,18 +70,14 @@ export default function Home() {
           {login && <Auth login={login} setLogin={setLogin} />}
 
           <div className="flex gap-4">
-            {user && (
-              <>
-                <button
-                  onClick={() => router.push("/dashboard")}
-                  className="bg-blue-500 hover:bg-blue-600 px-6 py-2 rounded-lg text-white font-semibold shadow-md"
-                >
-                  Dashboard
-                </button>
-                
-              </>
-            )}
-            {!user && (
+            {user ? (
+              <button
+                onClick={() => router.push("/dashboard")}
+                className="bg-blue-500 hover:bg-blue-600 px-6 py-2 rounded-lg text-white font-semibold shadow-md"
+              >
+                Dashboard
+              </button>
+            ) : (
               <button
                 onClick={() => setLogin(true)}
                 className="bg-green-500 hover:bg-green-600 px-6 py-2 rounded-lg text-white font-semibold shadow-md"
@@ -73,11 +86,11 @@ export default function Home() {
               </button>
             )}
             <button
-                  onClick={() => router.push("/leaderboard")}
-                  className="bg-purple-600 hover:bg-purple-700 px-6 py-2 rounded-lg text-white font-semibold shadow-md"
-                >
-                  Leaderboard
-                </button>
+              onClick={() => router.push("/leaderboard")}
+              className="bg-purple-600 hover:bg-purple-700 px-6 py-2 rounded-lg text-white font-semibold shadow-md"
+            >
+              Leaderboard
+            </button>
           </div>
         </div>
       </div>
