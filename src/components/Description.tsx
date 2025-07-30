@@ -135,13 +135,7 @@ export default function Description({ problem }: { problem: Problem }) {
 	return (
 		<div className='bg-black text-white h-full'>
 			{/* Tabs */}
-			<div className='flex h-11 w-full flex-wrap items-center border-b border-gray-700 text-sm'>
-				<div className='bg-[#262626] text-white font-semibold px-5 py-2 rounded-t-md'>
-					Description
-				</div>
-				{/* <div className='ml-2 px-4 py-2 text-gray-400 cursor-pointer hover:text-white'>Solution</div>
-				<div className='ml-2 px-4 py-2 text-gray-400 cursor-pointer hover:text-white'>Submissions</div> */}
-			</div>
+			
 
 			<div className='p-4 md:p-6'>
 				{/* Title and Stats */}
@@ -184,48 +178,80 @@ export default function Description({ problem }: { problem: Problem }) {
 	<div className="space-y-6">
 		{currentProblem.examples.map((example, idx) => {
 			
-			const inputObj = example.input?.[0]; // first key
+			// Handle both array and object input formats
+			let inputObj: Record<string, any> = {};
+			if (Array.isArray(example.input)) {
+				// If input is an array of objects, merge all objects
+				inputObj = example.input.reduce((acc: any, item: any) => ({ ...acc, ...item }), {});
+			} else if (typeof example.input === 'object' && example.input !== null) {
+				// If input is a single object
+				inputObj = example.input;
+			}
+			
 			const metaObj = example.output ; // second key, explanation/output
 
-			const formattedInput =
-	inputObj &&
-	Object.entries(inputObj)
-		.map(([key, value]) => {
-			let val: string;
-
-			const isMatrix =
-				typeof value === "object" &&
-				value !== null &&
-				Object.values(value).every(
-					(row: any) =>
-						typeof row === "object" &&
-						row !== null &&
-						Object.values(row).every((n) => typeof n === "number")
-				);
-
-			if (Array.isArray(value)) {
-				if (Array.isArray(value[0])) {
-					val = "[\n" + value.map((row) => `  [${row.join(", ")}]`).join(",\n") + "\n]";
-				} else {
-					val = `[${value.join(", ")}]`;
+			// Create a fixed order for parameters - prioritize common parameters
+			const parameterOrder = ['nums', 'target', 'head', 'val', 's', 't', 'word1', 'word2'];
+			
+			// Get all available parameters
+			const availableParams = Object.keys(inputObj);
+			
+			// Sort parameters: first by priority order, then alphabetically for others
+			const sortedParams = availableParams.sort((a, b) => {
+				const aIndex = parameterOrder.indexOf(a);
+				const bIndex = parameterOrder.indexOf(b);
+				
+				// If both are in priority order, sort by their index
+				if (aIndex !== -1 && bIndex !== -1) {
+					return aIndex - bIndex;
 				}
-			} else if (isMatrix) {
-				const matrix = Object.keys(value)
-					.sort((a, b) => Number(a) - Number(b))
-					.map((rowKey) => {
-						const row = value[rowKey as keyof typeof value];
-						return Object.keys(row)
-							.sort((a, b) => Number(a) - Number(b))
-							.map((colKey) => row[colKey as keyof typeof row]);
-					});
-				val = "[\n" + matrix.map((row) => `  [${row.join(", ")}]`).join(",\n") + "\n]";
-			} else {
-				val = JSON.stringify(value, null, 2);
-			}
+				
+				// If only one is in priority order, prioritize it
+				if (aIndex !== -1) return -1;
+				if (bIndex !== -1) return 1;
+				
+				// Otherwise, sort alphabetically
+				return a.localeCompare(b);
+			});
+			
+			const formattedInput = sortedParams
+				.map((key) => {
+					const value = inputObj[key];
+					let val: string;
 
-			return `${key} = ${val}`;
-		})
-		.join("\n");
+					const isMatrix =
+						typeof value === "object" &&
+						value !== null &&
+						Object.values(value).every(
+							(row: any) =>
+								typeof row === "object" &&
+								row !== null &&
+								Object.values(row).every((n) => typeof n === "number")
+						);
+
+					if (Array.isArray(value)) {
+						if (Array.isArray(value[0])) {
+							val = "[\n" + value.map((row) => `  [${row.join(", ")}]`).join(",\n") + "\n]";
+						} else {
+							val = `[${value.join(", ")}]`;
+						}
+					} else if (isMatrix) {
+						const matrix = Object.keys(value)
+							.sort((a, b) => Number(a) - Number(b))
+							.map((rowKey) => {
+								const row = value[rowKey as keyof typeof value];
+								return Object.keys(row)
+									.sort((a, b) => Number(a) - Number(b))
+									.map((colKey) => row[colKey as keyof typeof row]);
+							});
+						val = "[\n" + matrix.map((row) => `  [${row.join(", ")}]`).join(",\n") + "\n]";
+					} else {
+						val = JSON.stringify(value, null, 2);
+					}
+
+					return `${key} = ${val}`;
+				})
+				.join("\n");
 
 
 			const output = metaObj || "";
@@ -260,11 +286,6 @@ export default function Description({ problem }: { problem: Problem }) {
 		})}
 	</div>
 )}
-
-
-
-	
-
 
 				{/* Constraints */}
 				{currentProblem.constraints && (

@@ -16,6 +16,12 @@ export type Problem = {
 		output: string;
 		explanation?: string;
 	}[];
+	allTestCases?: {
+		id: number;
+		input: Record<string, any>;
+		output: string;
+		explanation?: string;
+	}[];
 	constraints: string[];
 };
 
