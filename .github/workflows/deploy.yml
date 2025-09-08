@@ -11,15 +11,11 @@ jobs:
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: 16.171.7.59
+          host: 16.171.148.245
           username: ubuntu
           key: ${{ secrets.PRIVATE_KEY }}
           port: 22
           script: |
-            # Install PM2 globally if not already installed
-            if ! command -v pm2 &> /dev/null; then
-              sudo npm install -g pm2
-            fi
             
             # Create directory if it doesn't exist
             if [ ! -d "algocode" ]; then
@@ -35,15 +31,6 @@ jobs:
             
             # Install/update dependencies
             npm install
-            
-            # Build the application with memory optimization
-            NODE_OPTIONS="--max-old-space-size=1024" npm run build
-            
-            # Verify build was successful
-            if [ ! -d ".next" ]; then
-              echo "Build failed - .next directory not found"
-              exit 1
-            fi
             
             # Stop existing PM2 process if running
             pm2 stop algocode 2>/dev/null || true
