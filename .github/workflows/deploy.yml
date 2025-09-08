@@ -32,6 +32,9 @@ jobs:
             # Install/update dependencies
             npm install
             
+            #build the application
+            npm run build
+            
             # Stop existing PM2 process if running
             pm2 stop algocode 2>/dev/null || true
             pm2 delete algocode 2>/dev/null || true
