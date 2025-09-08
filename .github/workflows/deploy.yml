@@ -34,11 +34,11 @@ jobs:
             
             #build the application
             npm run build
-            
+
             # Stop existing PM2 process if running
             pm2 stop algocode 2>/dev/null || true
             pm2 delete algocode 2>/dev/null || true
             
             # Start the application
-            pm2 start npm --name "algocode" -- start
+            pm2 start npm --name "algocode" -- run dev
           
