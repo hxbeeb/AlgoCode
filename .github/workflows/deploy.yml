@@ -36,9 +36,19 @@ jobs:
             # Install/update dependencies
             npm install
             
-            # Build the application
-            npm run build
+            # Build the application with memory optimization
+            NODE_OPTIONS="--max-old-space-size=1024" npm run build
             
-            # Restart the application
-            pm2 restart algocode || pm2 start npm --name "algocode" -- start
+            # Verify build was successful
+            if [ ! -d ".next" ]; then
+              echo "Build failed - .next directory not found"
+              exit 1
+            fi
+            
+            # Stop existing PM2 process if running
+            pm2 stop algocode 2>/dev/null || true
+            pm2 delete algocode 2>/dev/null || true
+            
+            # Start the application
+            pm2 start npm --name "algocode" -- start
           
